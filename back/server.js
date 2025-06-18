@@ -326,6 +326,28 @@ app.get('/api/debug-tables', async (req, res) => {
   }
 });
 
+// Route pour corriger la table medicaments
+app.get('/api/fix-medicaments', async (req, res) => {
+  try {
+    console.log('🔧 Correction manuelle de la table medicaments...');
+    const fixMedicamentsTable = require('./fix-medicaments-table');
+    
+    // Exécuter la correction
+    await fixMedicamentsTable();
+    
+    res.json({ 
+      message: 'Table medicaments corrigée avec succès',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de la correction de la table medicaments:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la correction de la table medicaments',
+      message: error.message 
+    });
+  }
+});
+
 // Middleware de gestion des erreurs amélioré
 app.use((err, req, res, next) => {
   console.error('\n=== Erreur serveur ===');
