@@ -1,7 +1,7 @@
 // Configuration pour la production
 export const config = {
   api: {
-    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+    baseUrl: 'https://back-at64.onrender.com/api',
     timeout: 10000
   },
   

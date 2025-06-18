@@ -44,16 +44,7 @@ const Home = () => {
   // Filtrage en temps réel
   useEffect(() => {
     if (searchQuery.trim()) {
-      fetch(`http://localhost:5001/api/medicaments/search?q=${encodeURIComponent(searchQuery)}`)
-        .then(res => res.json())
-        .then(data => {
-          setSearchResults(data);
-          setShowDropdown(true);
-        })
-        .catch(() => {
-          setSearchResults([]);
-          setShowDropdown(false);
-        });
+      handleSearch(searchQuery);
     } else {
       setSearchResults([]);
       setShowDropdown(false);
@@ -74,15 +65,38 @@ const Home = () => {
   useEffect(() => {
     if (!user?.id) return;
     console.log('ID utilisateur envoyé pour stats:', user.id);
-    fetch(`http://localhost:5001/api/stats?user_id=${user.id}`)
-      .then(res => res.json())
-      .then(data => setStats(data))
-      .catch(() => setStats({ medicaments: 0, commandes: 0, livraisons: 0 }));
+    loadUserStats();
   }, [user]);
 
   const handleAddToCart = (e, medicament) => {
     e.stopPropagation();
     addToCart(medicament);
+  };
+
+  const handleSearch = async (searchQuery) => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      const response = await api.get(`/medicaments/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchResults(response);
+    } catch (error) {
+      console.error('Erreur lors de la recherche:', error);
+      setSearchResults([]);
+    }
+  };
+
+  const loadUserStats = async () => {
+    if (!user) return;
+    
+    try {
+      const response = await api.get(`/stats?user_id=${user.id}`);
+      setStats(response);
+    } catch (error) {
+      console.error('Erreur lors du chargement des statistiques:', error);
+    }
   };
 
   return (

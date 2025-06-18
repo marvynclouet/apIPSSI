@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5001/api';
+const API_URL = 'https://back-at64.onrender.com/api';
 
 const handleResponse = async (response) => {
   const contentType = response.headers.get('content-type');

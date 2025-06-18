@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaEye, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
+import api from '../../services/api';
 import '../../styles/Admin.css';
 
 const Orders = () => {
@@ -20,29 +21,18 @@ const Orders = () => {
       navigate('/admin/login');
       return;
     }
-    fetchOrders();
+    loadOrders();
   }, [isAdmin, navigate]);
 
-  const fetchOrders = async () => {
+  const loadOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5001/api/orders/all', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des commandes');
-      }
-
-      const data = await response.json();
-      setOrders(data);
-    } catch (err) {
-      console.error('Erreur:', err);
-      setError('Erreur lors de la récupération des commandes');
+      const response = await api.get('/orders/all');
+      setOrders(response);
+      setError(null);
+    } catch (error) {
+      console.error('Erreur lors du chargement des commandes:', error);
+      setError('Erreur lors du chargement des commandes');
     } finally {
       setLoading(false);
     }
@@ -65,26 +55,13 @@ const Orders = () => {
     }
   };
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la mise à jour du statut');
-      }
-
-      fetchOrders(); // Rafraîchir la liste des commandes
-    } catch (err) {
-      console.error('Erreur:', err);
-      setError('Erreur lors de la mise à jour du statut');
+      await api.put(`/orders/${orderId}/status`, { status: newStatus });
+      await loadOrders(); // Recharger les commandes
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      alert('Erreur lors de la mise à jour du statut');
     }
   };
 
@@ -103,28 +80,17 @@ const Orders = () => {
     return items.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
   };
 
-  const handleDelete = async (orderId) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
-      try {
-        const response = await fetch(`http://localhost:5001/api/orders/${orderId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
+  const deleteOrder = async (orderId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
+      return;
+    }
 
-        if (!response.ok) {
-          throw new Error('Erreur lors de la suppression de la commande');
-        }
-
-        // Rafraîchir la liste des commandes
-        fetchOrders();
-      } catch (err) {
-        console.error('Erreur:', err);
-        setError('Erreur lors de la suppression de la commande');
-      }
+    try {
+      await api.delete(`/orders/${orderId}`);
+      await loadOrders(); // Recharger les commandes
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      alert('Erreur lors de la suppression de la commande');
     }
   };
 
@@ -140,34 +106,14 @@ const Orders = () => {
 
   const handleSaveEdit = async () => {
     try {
-      const response = await fetch(`http://localhost:5001/api/orders/${editedOrder.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          delivery_name: editedOrder.delivery_name,
-          delivery_address: editedOrder.delivery_address,
-          delivery_message: editedOrder.delivery_message,
-          total: editedOrder.total,
-          items: editedOrder.items
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la mise à jour de la commande');
-      }
-
-      // Rafraîchir la liste des commandes
-      fetchOrders();
+      await api.put(`/orders/${editedOrder.id}`, editedOrder);
       setShowModal(false);
       setEditMode(false);
       setEditedOrder(null);
-    } catch (err) {
-      console.error('Erreur:', err);
-      setError('Erreur lors de la mise à jour de la commande');
+      await loadOrders(); // Recharger les commandes
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+      alert('Erreur lors de la mise à jour de la commande');
     }
   };
 
@@ -229,7 +175,7 @@ const Orders = () => {
                 <td>
                   <select
                     value={order.status}
-                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                    onChange={(e) => updateOrderStatus(order.id, e.target.value)}
                     className="status-select"
                     style={{ 
                       backgroundColor: getStatusColor(order.status),
@@ -266,7 +212,7 @@ const Orders = () => {
                     <FaEye />
                   </button>
                   <button
-                    onClick={() => handleDelete(order.id)}
+                    onClick={() => deleteOrder(order.id)}
                     className="delete-button"
                     title="Supprimer la commande"
                   >
