@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Table des médicaments
 CREATE TABLE IF NOT EXISTS medicaments (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
     price DECIMAL(10,2) NOT NULL,
     stock INTEGER NOT NULL DEFAULT 0,
@@ -53,16 +53,17 @@ CREATE TABLE IF NOT EXISTS order_items (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insérer les données de test
+-- Insérer les données de test utilisateurs
 INSERT INTO users (name, siret, email, password, role, phone, address, city, postal_code) VALUES
 ('Pharmacie Test', '12345678901234', 'test@test.com', '$2a$10$TsKJ4ptpN0VTWQyaTsLw..vP9oPMMpaAN0FmwVStNC7WSD7EJj87e', 'user', '0612345678', '123 rue Test', 'Paris', '75000'),
 ('GSB Admin', '98765432101234', 'admin@gsb-pharma.fr', '$2a$10$TsKJ4ptpN0VTWQyaTsLw..vP9oPMMpaAN0FmwVStNC7WSD7EJj87e', 'admin', '0123456789', '15 rue de l''Administration', 'Paris', '75001')
 ON CONFLICT (email) DO NOTHING;
 
+-- Insérer les données de test médicaments
 INSERT INTO medicaments (name, description, price, stock, image_url) VALUES
 ('Paracétamol', 'Antalgique et antipyrétique', 5.99, 100, '/images/paracetamol.jpg'),
 ('Ibuprofène', 'Anti-inflammatoire non stéroïdien', 7.99, 80, '/images/ibuprofene.jpg'),
 ('Aspirine', 'Antalgique et anti-inflammatoire', 6.99, 90, '/images/aspirine.jpg'),
 ('Doliprane', 'Antalgique et antipyrétique', 5.99, 150, '/images/doliprane.jpg'),
 ('Efferalgan', 'Antalgique et antipyrétique', 6.99, 120, '/images/efferalgan.jpg')
-ON CONFLICT DO NOTHING; 
+ON CONFLICT (name) DO NOTHING; 
