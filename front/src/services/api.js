@@ -1,9 +1,9 @@
 // Configuration de l'API
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const API_URL = 'https://gsb-pharmacy-backend.onrender.com/api';
 
 // S'assurer que l'URL se termine par /api
 const getBaseUrl = () => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+  const baseUrl = 'https://gsb-pharmacy-backend.onrender.com';
   return baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
 };
 
