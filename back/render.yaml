@@ -1,0 +1,57 @@
+services:
+  # Base de données MySQL
+  - type: pserv
+    name: gsb-pharmacy-db
+    env: mysql
+    plan: free
+    ipAllowList: []
+
+  # Backend API
+  - type: web
+    name: gsb-pharmacy-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        fromService:
+          name: gsb-pharmacy-db
+          type: pserv
+          property: host
+      - key: DB_PORT
+        fromService:
+          name: gsb-pharmacy-db
+          type: pserv
+          property: port
+      - key: DB_USER
+        fromService:
+          name: gsb-pharmacy-db
+          type: pserv
+          property: user
+      - key: DB_PASSWORD
+        fromService:
+          name: gsb-pharmacy-db
+          type: pserv
+          property: password
+      - key: DB_NAME
+        value: bddfinalgsb
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: CORS_ORIGIN
+        value: https://gsb-pharmacy-frontend.onrender.com
+
+  # Frontend
+  - type: web
+    name: gsb-pharmacy-frontend
+    env: static
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://gsb-pharmacy-backend.onrender.com 

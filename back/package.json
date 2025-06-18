@@ -5,10 +5,12 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:minimal": "node minimal-server.js",
     "dev": "nodemon server.js",
     "init-db": "node init-database.js",
     "check-db": "node check-database.js",
-    "debug-health": "node debug-healthcheck.js"
+    "debug-health": "node debug-healthcheck.js",
+    "startup-check": "node startup-check.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
