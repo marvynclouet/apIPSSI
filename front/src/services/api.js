@@ -1,5 +1,13 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
+// S'assurer que l'URL se termine par /api
+const getBaseUrl = () => {
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+  return baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
+};
+
+const API_BASE_URL = getBaseUrl();
+
 const getHeaders = () => {
   const token = localStorage.getItem('token');
   return {
@@ -21,8 +29,8 @@ const api = {
   // Méthodes HTTP de base
   get: async (endpoint) => {
     try {
-      console.log('GET:', `${API_URL}${endpoint}`);
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      console.log('GET:', `${API_BASE_URL}${endpoint}`);
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: getHeaders(),
         credentials: 'include'
       });
@@ -35,9 +43,9 @@ const api = {
 
   post: async (endpoint, data) => {
     try {
-      console.log('POST:', `${API_URL}${endpoint}`);
+      console.log('POST:', `${API_BASE_URL}${endpoint}`);
       console.log('Données:', data);
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(data),
@@ -52,9 +60,9 @@ const api = {
 
   put: async (endpoint, data) => {
     try {
-      console.log('PUT:', `${API_URL}${endpoint}`);
+      console.log('PUT:', `${API_BASE_URL}${endpoint}`);
       console.log('Données:', data);
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify(data),
@@ -69,8 +77,8 @@ const api = {
 
   delete: async (endpoint) => {
     try {
-      console.log('DELETE:', `${API_URL}${endpoint}`);
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      console.log('DELETE:', `${API_BASE_URL}${endpoint}`);
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'DELETE',
         headers: getHeaders(),
         credentials: 'include'
