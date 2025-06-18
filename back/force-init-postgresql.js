@@ -10,14 +10,23 @@ async function forceInitializePostgreSQL() {
   
   try {
     // Créer le pool de connexion
-    pool = new Pool({
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT || 5432,
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME || 'bddfinalgsb',
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    });
+    if (process.env.DATABASE_URL) {
+      console.log('🔗 Utilisation de DATABASE_URL...');
+      pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      });
+    } else {
+      console.log('🔧 Utilisation des paramètres individuels...');
+      pool = new Pool({
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT || 5432,
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME || 'bddfinalgsb',
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      });
+    }
 
     console.log('✅ Connexion à PostgreSQL établie');
 
