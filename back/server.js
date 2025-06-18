@@ -70,13 +70,22 @@ app.use(cors({
       return callback(null, true);
     }
     
-    if (allowedOrigins.some(allowedOrigin => {
+    // Vérifier les origines autorisées
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
       if (allowedOrigin.endsWith(':*')) {
         const baseOrigin = allowedOrigin.replace(':*', '');
         return origin.startsWith(baseOrigin);
       }
+      if (allowedOrigin.includes('*')) {
+        // Gérer les wildcards comme *.vercel.app
+        const pattern = allowedOrigin.replace('*', '.*');
+        const regex = new RegExp(pattern);
+        return regex.test(origin);
+      }
       return allowedOrigin === origin;
-    })) {
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.log('Origine bloquée par CORS:', origin);
@@ -101,13 +110,22 @@ app.options('*', cors({
       return callback(null, true);
     }
     
-    if (allowedOrigins.some(allowedOrigin => {
+    // Vérifier les origines autorisées
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
       if (allowedOrigin.endsWith(':*')) {
         const baseOrigin = allowedOrigin.replace(':*', '');
         return origin.startsWith(baseOrigin);
       }
+      if (allowedOrigin.includes('*')) {
+        // Gérer les wildcards comme *.vercel.app
+        const pattern = allowedOrigin.replace('*', '.*');
+        const regex = new RegExp(pattern);
+        return regex.test(origin);
+      }
       return allowedOrigin === origin;
-    })) {
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.log('Origine bloquée par CORS (preflight):', origin);
