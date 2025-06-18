@@ -93,6 +93,8 @@ async function forceInitializePostgreSQL() {
       console.log(`  - ID: ${user.id}, Email: ${user.email}, Rôle: ${user.role}`);
     });
 
+    return { success: true, tables: tablesResult.rows, users: usersResult.rows };
+
   } catch (error) {
     console.error('❌ Erreur lors de l\'initialisation :', error);
     throw error;
@@ -104,13 +106,17 @@ async function forceInitializePostgreSQL() {
   }
 }
 
-// Exécuter le script
-forceInitializePostgreSQL()
-  .then(() => {
-    console.log('✅ Script terminé avec succès');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('❌ Script échoué :', error);
-    process.exit(1);
-  }); 
+// Exécuter le script seulement si appelé directement
+if (require.main === module) {
+  forceInitializePostgreSQL()
+    .then(() => {
+      console.log('✅ Script terminé avec succès');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('❌ Script échoué :', error);
+      process.exit(1);
+    });
+}
+
+module.exports = forceInitializePostgreSQL; 

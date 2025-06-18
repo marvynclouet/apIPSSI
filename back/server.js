@@ -248,6 +248,28 @@ app.get('/api/debug', async (req, res) => {
   }
 });
 
+// Route pour forcer l'initialisation de la base de données
+app.get('/api/init-db', async (req, res) => {
+  try {
+    console.log('🔄 Initialisation manuelle de la base de données...');
+    const forceInitializePostgreSQL = require('./force-init-postgresql');
+    
+    // Exécuter l'initialisation
+    await forceInitializePostgreSQL();
+    
+    res.json({ 
+      message: 'Base de données initialisée avec succès',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'initialisation manuelle:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de l\'initialisation',
+      message: error.message 
+    });
+  }
+});
+
 // Middleware de gestion des erreurs amélioré
 app.use((err, req, res, next) => {
   console.error('\n=== Erreur serveur ===');
