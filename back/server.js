@@ -17,9 +17,9 @@ const app = express();
 
 // Initialiser la base de données au démarrage (en production)
 if (process.env.NODE_ENV === 'production') {
-  const forceInitializeDatabase = require('./force-init-db');
-  console.log('🔄 Forçage de l\'initialisation de la base de données en production...');
-  forceInitializeDatabase().catch(console.error);
+  const initializePostgreSQL = require('./init-postgresql');
+  console.log('🔄 Initialisation de la base de données PostgreSQL en production...');
+  initializePostgreSQL().catch(console.error);
 }
 
 // Middleware de sécurité

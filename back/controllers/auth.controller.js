@@ -7,8 +7,8 @@ const register = async (req, res) => {
     const { name, siret, email, password, phone, address, city, postal_code } = req.body;
 
     // Vérifier si l'utilisateur existe déjà
-    const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existingUser.length > 0) {
+    const existingUser = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé' });
     }
 
@@ -16,14 +16,14 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insérer le nouvel utilisateur
-    const [result] = await db.query(
-      'INSERT INTO users (name, siret, email, password, role, phone, address, city, postal_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    const result = await db.query(
+      'INSERT INTO users (name, siret, email, password, role, phone, address, city, postal_code) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
       [name, siret, email, hashedPassword, 'user', phone, address, city, postal_code]
     );
 
     // Créer le token JWT
     const token = jwt.sign(
-      { userId: result.insertId },
+      { userId: result.rows[0].id },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -32,7 +32,7 @@ const register = async (req, res) => {
       message: 'Utilisateur créé avec succès',
       token,
       user: {
-        id: result.insertId,
+        id: result.rows[0].id,
         name,
         siret,
         email,
@@ -55,15 +55,15 @@ const login = async (req, res) => {
     console.log('Tentative de connexion pour:', email);
 
     // Vérifier si l'utilisateur existe
-    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-    console.log('Résultat de la requête:', users);
+    const users = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    console.log('Résultat de la requête:', users.rows);
 
-    if (users.length === 0) {
+    if (users.rows.length === 0) {
       console.log('Utilisateur non trouvé');
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
 
-    const user = users[0];
+    const user = users.rows[0];
     console.log('Utilisateur trouvé:', { id: user.id, email: user.email });
 
     // Vérifier le mot de passe
