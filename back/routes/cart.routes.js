@@ -6,15 +6,15 @@ const db = require('../config/db.config');
 // Obtenir le panier de l'utilisateur
 router.get('/', auth, async (req, res) => {
   try {
-    const [cartItems] = await db.query(
+    const result = await db.query(
       `SELECT ci.*, m.name, m.price, m.image_url 
        FROM cart_items ci 
        JOIN medicaments m ON ci.medicament_id = m.id 
-       WHERE ci.user_id = ?`,
+       WHERE ci.user_id = $1`,
       [req.userId]
     );
 
-    res.json(cartItems);
+    res.json(result.rows);
   } catch (error) {
     console.error('Erreur lors de la récupération du panier:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération du panier' });
@@ -27,32 +27,32 @@ router.post('/add', auth, async (req, res) => {
     const { medicamentId, quantity } = req.body;
 
     // Vérifier si le médicament existe
-    const [medicament] = await db.query('SELECT * FROM medicaments WHERE id = ?', [medicamentId]);
-    if (medicament.length === 0) {
+    const medicamentResult = await db.query('SELECT * FROM medicaments WHERE id = $1', [medicamentId]);
+    if (medicamentResult.rows.length === 0) {
       return res.status(404).json({ message: 'Médicament non trouvé' });
     }
 
     // Vérifier le stock
-    if (medicament[0].stock < quantity) {
+    if (medicamentResult.rows[0].stock < quantity) {
       return res.status(400).json({ message: 'Stock insuffisant' });
     }
 
     // Vérifier si le médicament est déjà dans le panier
-    const [existingItem] = await db.query(
-      'SELECT * FROM cart_items WHERE user_id = ? AND medicament_id = ?',
+    const existingResult = await db.query(
+      'SELECT * FROM cart_items WHERE user_id = $1 AND medicament_id = $2',
       [req.userId, medicamentId]
     );
 
-    if (existingItem.length > 0) {
+    if (existingResult.rows.length > 0) {
       // Mettre à jour la quantité
       await db.query(
-        'UPDATE cart_items SET quantity = quantity + ? WHERE user_id = ? AND medicament_id = ?',
+        'UPDATE cart_items SET quantity = quantity + $1 WHERE user_id = $2 AND medicament_id = $3',
         [quantity, req.userId, medicamentId]
       );
     } else {
       // Ajouter un nouvel article
       await db.query(
-        'INSERT INTO cart_items (user_id, medicament_id, quantity) VALUES (?, ?, ?)',
+        'INSERT INTO cart_items (user_id, medicament_id, quantity) VALUES ($1, $2, $3)',
         [req.userId, medicamentId, quantity]
       );
     }
@@ -70,28 +70,28 @@ router.put('/update/:id', auth, async (req, res) => {
     const { quantity } = req.body;
 
     // Vérifier si l'article existe dans le panier
-    const [cartItem] = await db.query(
-      'SELECT * FROM cart_items WHERE id = ? AND user_id = ?',
+    const cartItemResult = await db.query(
+      'SELECT * FROM cart_items WHERE id = $1 AND user_id = $2',
       [req.params.id, req.userId]
     );
 
-    if (cartItem.length === 0) {
+    if (cartItemResult.rows.length === 0) {
       return res.status(404).json({ message: 'Article non trouvé dans le panier' });
     }
 
     // Vérifier le stock
-    const [medicament] = await db.query(
-      'SELECT stock FROM medicaments WHERE id = ?',
-      [cartItem[0].medicament_id]
+    const medicamentResult = await db.query(
+      'SELECT stock FROM medicaments WHERE id = $1',
+      [cartItemResult.rows[0].medicament_id]
     );
 
-    if (medicament[0].stock < quantity) {
+    if (medicamentResult.rows[0].stock < quantity) {
       return res.status(400).json({ message: 'Stock insuffisant' });
     }
 
     // Mettre à jour la quantité
     await db.query(
-      'UPDATE cart_items SET quantity = ? WHERE id = ?',
+      'UPDATE cart_items SET quantity = $1 WHERE id = $2',
       [quantity, req.params.id]
     );
 
@@ -106,7 +106,7 @@ router.put('/update/:id', auth, async (req, res) => {
 router.delete('/remove/:id', auth, async (req, res) => {
   try {
     await db.query(
-      'DELETE FROM cart_items WHERE id = ? AND user_id = ?',
+      'DELETE FROM cart_items WHERE id = $1 AND user_id = $2',
       [req.params.id, req.userId]
     );
 
@@ -120,7 +120,7 @@ router.delete('/remove/:id', auth, async (req, res) => {
 // Vider le panier
 router.delete('/clear', auth, async (req, res) => {
   try {
-    await db.query('DELETE FROM cart_items WHERE user_id = ?', [req.userId]);
+    await db.query('DELETE FROM cart_items WHERE user_id = $1', [req.userId]);
     res.json({ message: 'Panier vidé avec succès' });
   } catch (error) {
     console.error('Erreur lors du vidage du panier:', error);

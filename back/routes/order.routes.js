@@ -7,8 +7,8 @@ const db = require('../config/db.config');
 // Middleware pour vérifier si l'utilisateur est admin
 const isAdmin = async (req, res, next) => {
   try {
-    const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.userId]);
-    if (users.length === 0 || users[0].role !== 'admin') {
+    const result = await db.query('SELECT role FROM users WHERE id = $1', [req.user.userId]);
+    if (result.rows.length === 0 || result.rows[0].role !== 'admin') {
       return res.status(403).json({ message: 'Accès non autorisé' });
     }
     next();
@@ -46,14 +46,14 @@ router.put('/:id/status', isAdmin, async (req, res) => {
     const orderId = req.params.id;
 
     // Vérifier si la commande existe
-    const [orders] = await db.query('SELECT id FROM orders WHERE id = ?', [orderId]);
-    if (orders.length === 0) {
+    const result = await db.query('SELECT id FROM orders WHERE id = $1', [orderId]);
+    if (result.rows.length === 0) {
       console.log('Order not found:', orderId);
       return res.status(404).json({ message: 'Commande non trouvée' });
     }
 
     // Mettre à jour le statut
-    await db.query('UPDATE orders SET status = ? WHERE id = ?', [status, orderId]);
+    await db.query('UPDATE orders SET status = $1 WHERE id = $2', [status, orderId]);
     console.log('Status updated successfully');
 
     res.json({ message: 'Statut mis à jour avec succès' });
@@ -73,24 +73,24 @@ router.put('/:id', isAdmin, async (req, res) => {
     const { delivery_name, delivery_address, delivery_message, total, items } = req.body;
 
     // Vérifier si la commande existe
-    const [orders] = await db.query('SELECT id FROM orders WHERE id = ?', [orderId]);
-    if (orders.length === 0) {
+    const result = await db.query('SELECT id FROM orders WHERE id = $1', [orderId]);
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Commande non trouvée' });
     }
 
     // Mettre à jour les informations de la commande
     await db.query(
-      'UPDATE orders SET delivery_name = ?, delivery_address = ?, delivery_message = ?, total = ? WHERE id = ?',
+      'UPDATE orders SET delivery_name = $1, delivery_address = $2, delivery_message = $3, total = $4 WHERE id = $5',
       [delivery_name, delivery_address, delivery_message, total, orderId]
     );
 
     // Supprimer les anciens items
-    await db.query('DELETE FROM order_items WHERE order_id = ?', [orderId]);
+    await db.query('DELETE FROM order_items WHERE order_id = $1', [orderId]);
 
     // Ajouter les nouveaux items
     for (const item of items) {
       await db.query(
-        'INSERT INTO order_items (order_id, medicament_id, quantity, price) VALUES (?, ?, ?, ?)',
+        'INSERT INTO order_items (order_id, medicament_id, quantity, price) VALUES ($1, $2, $3, $4)',
         [orderId, item.medicamentId, item.quantity, item.price]
       );
     }
@@ -108,16 +108,16 @@ router.delete('/:id', isAdmin, async (req, res) => {
     const orderId = req.params.id;
 
     // Vérifier si la commande existe
-    const [orders] = await db.query('SELECT id FROM orders WHERE id = ?', [orderId]);
-    if (orders.length === 0) {
+    const result = await db.query('SELECT id FROM orders WHERE id = $1', [orderId]);
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Commande non trouvée' });
     }
 
     // Supprimer d'abord les items de la commande (à cause de la contrainte de clé étrangère)
-    await db.query('DELETE FROM order_items WHERE order_id = ?', [orderId]);
+    await db.query('DELETE FROM order_items WHERE order_id = $1', [orderId]);
 
     // Supprimer la commande
-    await db.query('DELETE FROM orders WHERE id = ?', [orderId]);
+    await db.query('DELETE FROM orders WHERE id = $1', [orderId]);
 
     res.json({ message: 'Commande supprimée avec succès' });
   } catch (error) {

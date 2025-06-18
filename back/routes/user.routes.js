@@ -21,10 +21,10 @@ router.use(adminMiddleware);
 // Route pour obtenir tous les utilisateurs (admin seulement)
 router.get('/', async (req, res) => {
   try {
-    const [users] = await db.query(
-      'SELECT id, name, siret, email, role, phone, address, city, postal_code, created_at, updated_at FROM users WHERE is_deleted = FALSE OR is_deleted IS NULL'
+    const result = await db.query(
+      'SELECT id, name, siret, email, role, phone, address, city, postal_code, created_at, updated_at FROM users ORDER BY name ASC'
     );
-    res.json(users);
+    res.json(result.rows);
   } catch (error) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des utilisateurs' });
@@ -37,8 +37,8 @@ router.post('/', async (req, res) => {
     const { name, siret, email, password, role, phone, address, city, postal_code } = req.body;
     
     // Vérifier si l'email existe déjà
-    const [existingUsers] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existingUsers.length > 0) {
+    const existingResult = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existingResult.rows.length > 0) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé' });
     }
 
@@ -46,13 +46,16 @@ router.post('/', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Créer l'utilisateur
-    await db.query(
+    const result = await db.query(
       `INSERT INTO users (name, siret, email, password, role, phone, address, city, postal_code)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
       [name, siret, email, hashedPassword, role, phone, address, city, postal_code]
     );
 
-    res.status(201).json({ message: 'Utilisateur créé avec succès' });
+    res.status(201).json({ 
+      message: 'Utilisateur créé avec succès',
+      id: result.rows[0].id
+    });
   } catch (error) {
     console.error('Erreur lors de la création de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur lors de la création de l\'utilisateur' });
@@ -66,29 +69,29 @@ router.put('/:id', async (req, res) => {
     const { name, siret, email, password, role, phone, address, city, postal_code } = req.body;
 
     // Vérifier si l'utilisateur existe
-    const [users] = await db.query('SELECT id FROM users WHERE id = ?', [userId]);
-    if (users.length === 0) {
+    const userResult = await db.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
 
     // Vérifier si l'email est déjà utilisé par un autre utilisateur
-    const [existingUsers] = await db.query('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
-    if (existingUsers.length > 0) {
+    const existingResult = await db.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, userId]);
+    if (existingResult.rows.length > 0) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé' });
     }
 
     // Préparer la requête de mise à jour
-    let updateQuery = 'UPDATE users SET name = ?, siret = ?, email = ?, role = ?, phone = ?, address = ?, city = ?, postal_code = ?';
+    let updateQuery = 'UPDATE users SET name = $1, siret = $2, email = $3, role = $4, phone = $5, address = $6, city = $7, postal_code = $8';
     const updateValues = [name, siret, email, role, phone, address, city, postal_code];
 
     // Ajouter le mot de passe à la mise à jour si fourni
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
-      updateQuery += ', password = ?';
+      updateQuery += ', password = $9';
       updateValues.push(hashedPassword);
     }
 
-    updateQuery += ' WHERE id = ?';
+    updateQuery += ' WHERE id = $' + (updateValues.length + 1);
     updateValues.push(userId);
 
     await db.query(updateQuery, updateValues);
@@ -106,15 +109,15 @@ router.delete('/:id', async (req, res) => {
     const userId = req.params.id;
 
     // Vérifier si l'utilisateur existe
-    const [users] = await db.query('SELECT id FROM users WHERE id = ?', [userId]);
-    if (users.length === 0) {
+    const result = await db.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
 
-    // Suppression logique : on met à jour le champ is_deleted
-    await db.query('UPDATE users SET is_deleted = TRUE WHERE id = ?', [userId]);
+    // Suppression physique
+    await db.query('DELETE FROM users WHERE id = $1', [userId]);
 
-    res.json({ message: 'Utilisateur masqué (suppression logique) avec succès' });
+    res.json({ message: 'Utilisateur supprimé avec succès' });
   } catch (error) {
     console.error('Erreur lors de la suppression de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur lors de la suppression de l\'utilisateur' });
