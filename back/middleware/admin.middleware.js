@@ -5,16 +5,16 @@ const adminMiddleware = async (req, res, next) => {
   try {
     console.log('Admin middleware - User ID:', req.user.userId);
     
-    const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.userId]);
-    console.log('User role query result:', users);
+    const result = await db.query('SELECT role FROM users WHERE id = $1', [req.user.userId]);
+    console.log('User role query result:', result.rows);
 
-    if (users.length === 0) {
+    if (result.rows.length === 0) {
       console.log('User not found in database');
       return res.status(403).json({ message: 'Utilisateur non trouvé' });
     }
 
-    if (users[0].role !== 'admin') {
-      console.log('User role is not admin:', users[0].role);
+    if (result.rows[0].role !== 'admin') {
+      console.log('User role is not admin:', result.rows[0].role);
       return res.status(403).json({ message: 'Accès refusé. Seuls les administrateurs peuvent accéder à cette ressource.' });
     }
 
