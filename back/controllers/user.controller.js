@@ -4,12 +4,12 @@ const getUserProfile = async (req, res) => {
   try {
     console.log('Récupération du profil pour userId:', req.user.userId);
     
-    const [users] = await db.query(
-      'SELECT id, name, siret, email, role, phone, address, city, postal_code, created_at, updated_at FROM users WHERE id = ?',
+    const result = await db.query(
+      'SELECT id, name, siret, email, role, phone, address, city, postal_code, created_at, updated_at FROM users WHERE id = $1',
       [req.user.userId]
     );
 
-    if (users.length === 0) {
+    if (result.rows.length === 0) {
       console.log('Utilisateur non trouvé pour userId:', req.user.userId);
       return res.status(404).json({ 
         message: 'Utilisateur non trouvé',
@@ -17,7 +17,7 @@ const getUserProfile = async (req, res) => {
       });
     }
 
-    const user = users[0];
+    const user = result.rows[0];
     console.log('Profil trouvé:', { id: user.id, email: user.email });
     
     // Ne pas envoyer les données sensibles
@@ -42,7 +42,7 @@ const updateProfile = async (req, res) => {
     console.log('Données reçues:', { name, phone, address, city, postal_code });
 
     await db.query(
-      'UPDATE users SET name = ?, phone = ?, address = ?, city = ?, postal_code = ? WHERE id = ?',
+      'UPDATE users SET name = $1, phone = $2, address = $3, city = $4, postal_code = $5 WHERE id = $6',
       [name, phone, address, city, postal_code, userId]
     );
 

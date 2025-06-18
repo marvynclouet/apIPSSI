@@ -8,31 +8,31 @@ const orderController = {
       const userId = req.user.userId;
 
       // Récupérer les informations de l'utilisateur
-      const [users] = await db.query(
-        'SELECT name, address FROM users WHERE id = ?',
+      const userResult = await db.query(
+        'SELECT name, address FROM users WHERE id = $1',
         [userId]
       );
 
-      if (users.length === 0) {
+      if (userResult.rows.length === 0) {
         return res.status(404).json({ message: 'Utilisateur non trouvé' });
       }
 
-      const user = users[0];
+      const user = userResult.rows[0];
 
       // Insérer la commande
-      const [orderResult] = await db.query(
+      const orderResult = await db.query(
         `INSERT INTO orders (user_id, total, status, delivery_name, delivery_address, delivery_message)
-         VALUES (?, ?, 'pending', ?, ?, ?)`,
+         VALUES ($1, $2, 'pending', $3, $4, $5) RETURNING id`,
         [userId, total, user.name, user.address, message]
       );
 
-      const orderId = orderResult.insertId;
+      const orderId = orderResult.rows[0].id;
 
       // Insérer les items de la commande
       for (const item of items) {
         await db.query(
           `INSERT INTO order_items (order_id, medicament_id, quantity, price)
-           VALUES (?, ?, ?, ?)`,
+           VALUES ($1, $2, $3, $4)`,
           [orderId, item.medicamentId, item.quantity, item.price]
         );
       }
@@ -43,7 +43,10 @@ const orderController = {
       });
     } catch (error) {
       console.error('Erreur lors de la création de la commande:', error);
-      res.status(500).json({ message: 'Erreur lors de la création de la commande' });
+      res.status(500).json({ 
+        error: 'Erreur serveur', 
+        details: error.message 
+      });
     }
   },
 
@@ -51,11 +54,11 @@ const orderController = {
   getUserOrders: async (req, res) => {
     try {
       const userId = req.user.userId;
-      const [orders] = await db.query(
+      const result = await db.query(
         `SELECT o.*, 
-                COALESCE(JSON_ARRAYAGG(
-                  CASE WHEN oi.id IS NOT NULL THEN
-                    JSON_OBJECT(
+                COALESCE(
+                  (SELECT json_agg(
+                    json_build_object(
                       'id', oi.id,
                       'medicamentId', oi.medicament_id,
                       'quantity', oi.quantity,
@@ -63,26 +66,24 @@ const orderController = {
                       'name', m.name,
                       'image_url', m.image_url
                     )
-                  END
-                ), '[]') as items
+                  )
+                  FROM order_items oi
+                  LEFT JOIN medicaments m ON oi.medicament_id = m.id
+                  WHERE oi.order_id = o.id), '[]'::json
+                ) as items
          FROM orders o
-         LEFT JOIN order_items oi ON o.id = oi.order_id
-         LEFT JOIN medicaments m ON oi.medicament_id = m.id
-         WHERE o.user_id = ?
-         GROUP BY o.id
+         WHERE o.user_id = $1
          ORDER BY o.created_at DESC`,
         [userId]
       );
 
-      // Convertir la chaîne JSON en tableau pour chaque commande
-      orders.forEach(order => {
-        order.items = JSON.parse(order.items);
-      });
-
-      res.json(orders);
+      res.json(result.rows);
     } catch (error) {
       console.error('Erreur lors de la récupération des commandes:', error);
-      res.status(500).json({ message: 'Erreur lors de la récupération des commandes' });
+      res.status(500).json({ 
+        error: 'Erreur serveur', 
+        details: error.message 
+      });
     }
   },
 
@@ -92,11 +93,11 @@ const orderController = {
       const orderId = req.params.id;
       const userId = req.user.userId;
 
-      const [orders] = await db.query(
+      const result = await db.query(
         `SELECT o.*, 
-                COALESCE(JSON_ARRAYAGG(
-                  CASE WHEN oi.id IS NOT NULL THEN
-                    JSON_OBJECT(
+                COALESCE(
+                  (SELECT json_agg(
+                    json_build_object(
                       'id', oi.id,
                       'medicamentId', oi.medicament_id,
                       'quantity', oi.quantity,
@@ -104,39 +105,40 @@ const orderController = {
                       'name', m.name,
                       'image_url', m.image_url
                     )
-                  END
-                ), '[]') as items
+                  )
+                  FROM order_items oi
+                  LEFT JOIN medicaments m ON oi.medicament_id = m.id
+                  WHERE oi.order_id = o.id), '[]'::json
+                ) as items
          FROM orders o
-         LEFT JOIN order_items oi ON o.id = oi.order_id
-         LEFT JOIN medicaments m ON oi.medicament_id = m.id
-         WHERE o.id = ? AND o.user_id = ?
-         GROUP BY o.id`,
+         WHERE o.id = $1 AND o.user_id = $2`,
         [orderId, userId]
       );
 
-      if (orders.length === 0) {
+      if (result.rows.length === 0) {
         return res.status(404).json({ message: 'Commande non trouvée' });
       }
 
-      // Convertir la chaîne JSON en tableau
-      orders[0].items = JSON.parse(orders[0].items);
-      res.json(orders[0]);
+      res.json(result.rows[0]);
     } catch (error) {
       console.error('Erreur lors de la récupération de la commande:', error);
-      res.status(500).json({ message: 'Erreur lors de la récupération de la commande' });
+      res.status(500).json({ 
+        error: 'Erreur serveur', 
+        details: error.message 
+      });
     }
   },
 
   // Récupérer toutes les commandes (pour l'admin)
   getAllOrders: async (req, res) => {
     try {
-      const [orders] = await db.query(
+      const result = await db.query(
         `SELECT o.*, 
                 u.name as user_name,
                 u.email as user_email,
-                COALESCE(JSON_ARRAYAGG(
-                  CASE WHEN oi.id IS NOT NULL THEN
-                    JSON_OBJECT(
+                COALESCE(
+                  (SELECT json_agg(
+                    json_build_object(
                       'id', oi.id,
                       'medicamentId', oi.medicament_id,
                       'quantity', oi.quantity,
@@ -144,25 +146,23 @@ const orderController = {
                       'name', m.name,
                       'image_url', m.image_url
                     )
-                  END
-                ), '[]') as items
+                  )
+                  FROM order_items oi
+                  LEFT JOIN medicaments m ON oi.medicament_id = m.id
+                  WHERE oi.order_id = o.id), '[]'::json
+                ) as items
          FROM orders o
-         LEFT JOIN order_items oi ON o.id = oi.order_id
-         LEFT JOIN medicaments m ON oi.medicament_id = m.id
          LEFT JOIN users u ON o.user_id = u.id
-         GROUP BY o.id
          ORDER BY o.created_at DESC`
       );
 
-      // Convertir la chaîne JSON en tableau pour chaque commande
-      orders.forEach(order => {
-        order.items = JSON.parse(order.items);
-      });
-
-      res.json(orders);
+      res.json(result.rows);
     } catch (error) {
       console.error('Erreur lors de la récupération des commandes:', error);
-      res.status(500).json({ message: 'Erreur lors de la récupération des commandes' });
+      res.status(500).json({ 
+        error: 'Erreur serveur', 
+        details: error.message 
+      });
     }
   }
 };
