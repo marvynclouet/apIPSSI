@@ -348,6 +348,29 @@ app.get('/api/fix-medicaments', async (req, res) => {
   }
 });
 
+// Route temporaire pour corriger les URLs des images des médicaments
+app.get('/api/fix-medicament-images', async (req, res) => {
+  try {
+    const db = require('./config/db.config');
+    const updates = [
+      { name: 'Paracétamol', file: 'paracetamol.jpg' },
+      { name: 'Ibuprofène', file: 'ibuprofene.jpg' },
+      { name: 'Aspirine', file: 'aspirine.jpg' },
+      { name: 'Doliprane', file: 'doliprane.jpg' },
+      { name: 'Efferalgan', file: 'efferalgan.jpg' }
+    ];
+    for (const { name, file } of updates) {
+      await db.query('UPDATE medicaments SET image_url = $1 WHERE name = $2', [
+        `/images/${file}`,
+        name
+      ]);
+    }
+    res.json({ message: 'Images des médicaments mises à jour !' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Middleware de gestion des erreurs amélioré
 app.use((err, req, res, next) => {
   console.error('\n=== Erreur serveur ===');
