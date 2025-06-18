@@ -185,6 +185,60 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Route de diagnostic
+app.get('/api/debug', async (req, res) => {
+  try {
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        DB_HOST: process.env.DB_HOST,
+        DB_PORT: process.env.DB_PORT,
+        DB_USER: process.env.DB_USER,
+        DB_NAME: process.env.DB_NAME,
+        DB_PASSWORD: process.env.DB_PASSWORD ? 'PRESENT' : 'ABSENT',
+        DATABASE_URL: process.env.DATABASE_URL ? 'PRESENT' : 'ABSENT',
+        JWT_SECRET: process.env.JWT_SECRET ? 'PRESENT' : 'ABSENT',
+        CORS_ORIGIN: process.env.CORS_ORIGIN
+      },
+      database: {
+        status: 'testing...'
+      }
+    };
+
+    // Test de connexion à la base de données
+    try {
+      const db = require('./config/db.config');
+      const result = await db.query('SELECT NOW() as current_time');
+      debugInfo.database.status = 'connected';
+      debugInfo.database.currentTime = result.rows[0].current_time;
+      
+      // Vérifier les tables
+      const tablesResult = await db.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+      `);
+      debugInfo.database.tables = tablesResult.rows.map(t => t.table_name);
+      
+      // Vérifier les utilisateurs
+      const usersResult = await db.query('SELECT id, email, role FROM users LIMIT 5');
+      debugInfo.database.users = usersResult.rows;
+      
+    } catch (dbError) {
+      debugInfo.database.status = 'error';
+      debugInfo.database.error = dbError.message;
+    }
+
+    res.json(debugInfo);
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Erreur lors du diagnostic',
+      message: error.message 
+    });
+  }
+});
+
 // Middleware de gestion des erreurs amélioré
 app.use((err, req, res, next) => {
   console.error('\n=== Erreur serveur ===');
