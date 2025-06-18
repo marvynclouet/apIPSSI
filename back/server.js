@@ -276,22 +276,51 @@ app.get('/api/create-users', async (req, res) => {
     console.log('👥 Création manuelle des utilisateurs de test...');
     const createTestUsers = require('./create_test_user');
     
-    // Exécuter la création des utilisateurs
+    // Exécuter la création
     await createTestUsers();
     
     res.json({ 
       message: 'Utilisateurs de test créés avec succès',
-      timestamp: new Date().toISOString(),
-      users: [
-        { email: 'test@test.com', password: 'test123', role: 'user' },
-        { email: 'admin@gsb-pharma.fr', password: 'test123', role: 'admin' },
-        { email: 'demo@pharmacy.com', password: 'test123', role: 'user' }
-      ]
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('❌ Erreur lors de la création des utilisateurs:', error);
     res.status(500).json({ 
       error: 'Erreur lors de la création des utilisateurs',
+      message: error.message 
+    });
+  }
+});
+
+// Route pour vérifier la structure des tables
+app.get('/api/debug-tables', async (req, res) => {
+  try {
+    const db = require('./config/db.config');
+    
+    // Vérifier la structure de la table medicaments
+    const medicamentsStructure = await db.query(`
+      SELECT column_name, data_type, is_nullable 
+      FROM information_schema.columns 
+      WHERE table_name = 'medicaments' 
+      ORDER BY ordinal_position
+    `);
+    
+    // Vérifier la structure de la table users
+    const usersStructure = await db.query(`
+      SELECT column_name, data_type, is_nullable 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' 
+      ORDER BY ordinal_position
+    `);
+    
+    res.json({
+      medicaments: medicamentsStructure.rows,
+      users: usersStructure.rows
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de la vérification des tables:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la vérification des tables',
       message: error.message 
     });
   }
