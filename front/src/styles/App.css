@@ -4,26 +4,37 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
+  height: 100%;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f1f8e9;
   color: #333;
   line-height: 1.6;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .app {
   min-height: 100vh;
   background-color: #f1f8e9;
+  display: flex;
+  flex-direction: column;
 }
 
 .main-content {
   flex: 1;
-  margin-left: 250px;
+  margin-top: 70px;
   padding: 2rem;
-  min-height: 100vh;
-  width: calc(100% - 250px);
+  min-height: calc(100vh - 70px);
+  width: 100%;
   background: #f1f8e9;
   overflow-x: hidden;
+  transition: all 0.3s ease;
 }
 
 .full-content {
@@ -32,12 +43,51 @@ body {
   min-height: 100vh;
   background: #f1f8e9;
   overflow-x: hidden;
+  padding: 2rem;
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 1024px) {
+  .main-content,
+  .full-content {
+    padding: 1.5rem;
+  }
 }
 
 @media (max-width: 768px) {
   .main-content {
-    margin-left: 0;
-    width: 100%;
+    margin-top: 60px;
     padding: 1rem;
+    min-height: calc(100vh - 60px);
+  }
+  
+  .full-content {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content,
+  .full-content {
+    padding: 0.5rem;
+  }
+}
+
+/* === CORRECTIONS SPÉCIFIQUES === */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 0.5rem;
   }
 } 
