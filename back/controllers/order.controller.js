@@ -54,30 +54,39 @@ const orderController = {
   getUserOrders: async (req, res) => {
     try {
       const userId = req.user.userId;
-      const result = await db.query(
-        `SELECT o.*, 
-                COALESCE(
-                  (SELECT json_agg(
-                    json_build_object(
-                      'id', oi.id,
-                      'medicamentId', oi.medicament_id,
-                      'quantity', oi.quantity,
-                      'price', oi.price,
-                      'name', m.name,
-                      'image_url', m.image_url
-                    )
-                  )
-                  FROM order_items oi
-                  LEFT JOIN medicaments m ON oi.medicament_id = m.id
-                  WHERE oi.order_id = o.id), '[]'::json
-                ) as items
-         FROM orders o
-         WHERE o.user_id = $1
-         ORDER BY o.created_at DESC`,
+      
+      // Récupérer les commandes de base
+      const ordersResult = await db.query(
+        `SELECT id, total, status, created_at, delivery_name, delivery_address, delivery_message
+         FROM orders 
+         WHERE user_id = $1
+         ORDER BY created_at DESC`,
         [userId]
       );
 
-      res.json(result.rows);
+      const orders = ordersResult.rows;
+
+      // Pour chaque commande, récupérer les items
+      for (let order of orders) {
+        const itemsResult = await db.query(
+          `SELECT oi.id, oi.medicament_id, oi.quantity, oi.price, m.name, m.image_url
+           FROM order_items oi
+           LEFT JOIN medicaments m ON oi.medicament_id = m.id
+           WHERE oi.order_id = $1`,
+          [order.id]
+        );
+        
+        order.items = itemsResult.rows.map(item => ({
+          id: item.id,
+          medicamentId: item.medicament_id,
+          quantity: item.quantity,
+          price: item.price,
+          name: item.name,
+          image_url: item.image_url
+        }));
+      }
+
+      res.json(orders);
     } catch (error) {
       console.error('Erreur lors de la récupération des commandes:', error);
       res.status(500).json({ 
@@ -93,33 +102,39 @@ const orderController = {
       const orderId = req.params.id;
       const userId = req.user.userId;
 
-      const result = await db.query(
-        `SELECT o.*, 
-                COALESCE(
-                  (SELECT json_agg(
-                    json_build_object(
-                      'id', oi.id,
-                      'medicamentId', oi.medicament_id,
-                      'quantity', oi.quantity,
-                      'price', oi.price,
-                      'name', m.name,
-                      'image_url', m.image_url
-                    )
-                  )
-                  FROM order_items oi
-                  LEFT JOIN medicaments m ON oi.medicament_id = m.id
-                  WHERE oi.order_id = o.id), '[]'::json
-                ) as items
-         FROM orders o
-         WHERE o.id = $1 AND o.user_id = $2`,
+      // Récupérer la commande
+      const orderResult = await db.query(
+        `SELECT id, total, status, created_at, delivery_name, delivery_address, delivery_message
+         FROM orders 
+         WHERE id = $1 AND user_id = $2`,
         [orderId, userId]
       );
 
-      if (result.rows.length === 0) {
+      if (orderResult.rows.length === 0) {
         return res.status(404).json({ message: 'Commande non trouvée' });
       }
 
-      res.json(result.rows[0]);
+      const order = orderResult.rows[0];
+
+      // Récupérer les items de la commande
+      const itemsResult = await db.query(
+        `SELECT oi.id, oi.medicament_id, oi.quantity, oi.price, m.name, m.image_url
+         FROM order_items oi
+         LEFT JOIN medicaments m ON oi.medicament_id = m.id
+         WHERE oi.order_id = $1`,
+        [orderId]
+      );
+
+      order.items = itemsResult.rows.map(item => ({
+        id: item.id,
+        medicamentId: item.medicament_id,
+        quantity: item.quantity,
+        price: item.price,
+        name: item.name,
+        image_url: item.image_url
+      }));
+
+      res.json(order);
     } catch (error) {
       console.error('Erreur lors de la récupération de la commande:', error);
       res.status(500).json({ 
@@ -132,31 +147,38 @@ const orderController = {
   // Récupérer toutes les commandes (pour l'admin)
   getAllOrders: async (req, res) => {
     try {
-      const result = await db.query(
-        `SELECT o.*, 
-                u.name as user_name,
-                u.email as user_email,
-                COALESCE(
-                  (SELECT json_agg(
-                    json_build_object(
-                      'id', oi.id,
-                      'medicamentId', oi.medicament_id,
-                      'quantity', oi.quantity,
-                      'price', oi.price,
-                      'name', m.name,
-                      'image_url', m.image_url
-                    )
-                  )
-                  FROM order_items oi
-                  LEFT JOIN medicaments m ON oi.medicament_id = m.id
-                  WHERE oi.order_id = o.id), '[]'::json
-                ) as items
+      // Récupérer les commandes avec les informations utilisateur
+      const ordersResult = await db.query(
+        `SELECT o.id, o.total, o.status, o.created_at, o.delivery_name, o.delivery_address, o.delivery_message,
+                u.name as user_name, u.email as user_email
          FROM orders o
          LEFT JOIN users u ON o.user_id = u.id
          ORDER BY o.created_at DESC`
       );
 
-      res.json(result.rows);
+      const orders = ordersResult.rows;
+
+      // Pour chaque commande, récupérer les items
+      for (let order of orders) {
+        const itemsResult = await db.query(
+          `SELECT oi.id, oi.medicament_id, oi.quantity, oi.price, m.name, m.image_url
+           FROM order_items oi
+           LEFT JOIN medicaments m ON oi.medicament_id = m.id
+           WHERE oi.order_id = $1`,
+          [order.id]
+        );
+        
+        order.items = itemsResult.rows.map(item => ({
+          id: item.id,
+          medicamentId: item.medicament_id,
+          quantity: item.quantity,
+          price: item.price,
+          name: item.name,
+          image_url: item.image_url
+        }));
+      }
+
+      res.json(orders);
     } catch (error) {
       console.error('Erreur lors de la récupération des commandes:', error);
       res.status(500).json({ 
