@@ -18,8 +18,17 @@ const app = express();
 // Initialiser la base de données au démarrage (en production)
 if (process.env.NODE_ENV === 'production') {
   const initializePostgreSQL = require('./init-postgresql');
-  console.log('🔄 Initialisation de la base de données PostgreSQL en production...');
-  initializePostgreSQL().catch(console.error);
+  console.log('🔄 Initialisation forcée de la base de données PostgreSQL en production...');
+  
+  // Attendre un peu avant d'initialiser
+  setTimeout(async () => {
+    try {
+      await initializePostgreSQL();
+      console.log('✅ Base de données PostgreSQL initialisée avec succès !');
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'initialisation PostgreSQL:', error);
+    }
+  }, 5000); // Attendre 5 secondes
 }
 
 // Middleware de sécurité
