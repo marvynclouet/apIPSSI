@@ -1,3 +1,4 @@
+// Configuration de l'API
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 // S'assurer que l'URL se termine par /api
@@ -7,6 +8,8 @@ const getBaseUrl = () => {
 };
 
 const API_BASE_URL = getBaseUrl();
+
+console.log('API_BASE_URL:', API_BASE_URL); // Debug
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
