@@ -86,12 +86,17 @@ async function forceInitializePostgreSQL() {
       console.log(`  - ${table.table_name}`);
     });
 
-    // Vérifier les utilisateurs
-    const usersResult = await pool.query('SELECT id, email, role FROM users');
-    console.log('👥 Utilisateurs créés :');
-    usersResult.rows.forEach(user => {
-      console.log(`  - ID: ${user.id}, Email: ${user.email}, Rôle: ${user.role}`);
-    });
+    // Vérifier les utilisateurs seulement si la table existe
+    let usersResult = { rows: [] };
+    try {
+      usersResult = await pool.query('SELECT id, email, role FROM users');
+      console.log('👥 Utilisateurs créés :');
+      usersResult.rows.forEach(user => {
+        console.log(`  - ID: ${user.id}, Email: ${user.email}, Rôle: ${user.role}`);
+      });
+    } catch (error) {
+      console.log('⚠️ Table users pas encore créée ou vide');
+    }
 
     return { success: true, tables: tablesResult.rows, users: usersResult.rows };
 
