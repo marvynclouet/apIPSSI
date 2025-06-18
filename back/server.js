@@ -270,6 +270,33 @@ app.get('/api/init-db', async (req, res) => {
   }
 });
 
+// Route pour créer des utilisateurs de test
+app.get('/api/create-users', async (req, res) => {
+  try {
+    console.log('👥 Création manuelle des utilisateurs de test...');
+    const createTestUsers = require('./create_test_user');
+    
+    // Exécuter la création des utilisateurs
+    await createTestUsers();
+    
+    res.json({ 
+      message: 'Utilisateurs de test créés avec succès',
+      timestamp: new Date().toISOString(),
+      users: [
+        { email: 'test@test.com', password: 'test123', role: 'user' },
+        { email: 'admin@gsb-pharma.fr', password: 'test123', role: 'admin' },
+        { email: 'demo@pharmacy.com', password: 'test123', role: 'user' }
+      ]
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de la création des utilisateurs:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la création des utilisateurs',
+      message: error.message 
+    });
+  }
+});
+
 // Middleware de gestion des erreurs amélioré
 app.use((err, req, res, next) => {
   console.error('\n=== Erreur serveur ===');
