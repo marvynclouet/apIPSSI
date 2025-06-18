@@ -21,38 +21,38 @@ async function initializePostgreSQL() {
 
     console.log('✅ Connexion à PostgreSQL établie');
 
-    // Lire le fichier SQL
-    const sqlFile = path.join(__dirname, 'bddfinalgsb.sql');
+    // Lire le fichier SQL PostgreSQL
+    const sqlFile = path.join(__dirname, 'schema-postgresql.sql');
     const sqlContent = await fs.readFile(sqlFile, 'utf8');
     
-    console.log('📄 Lecture du fichier SQL...');
+    console.log('📄 Lecture du fichier SQL PostgreSQL...');
     
-    // Convertir le SQL MySQL en PostgreSQL
-    let postgresSQL = sqlContent
-      // Remplacer les backticks par des guillemets doubles
-      .replace(/`/g, '"')
-      // Remplacer AUTO_INCREMENT par SERIAL
-      .replace(/AUTO_INCREMENT/g, 'SERIAL')
-      // Remplacer ENGINE=InnoDB par rien
-      .replace(/ENGINE=InnoDB/g, '')
-      // Remplacer DEFAULT CHARSET=utf8 par rien
-      .replace(/DEFAULT CHARSET=utf8/g, '')
-      // Remplacer les commentaires MySQL par PostgreSQL
-      .replace(/--/g, '--')
-      // Remplacer les paramètres MySQL par PostgreSQL
-      .replace(/\?/g, '$1')
-      // Supprimer les lignes SET SQL_MODE
-      .replace(/SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";\n/g, '')
-      .replace(/START TRANSACTION;\n/g, 'BEGIN;\n')
-      .replace(/COMMIT;\n/g, 'COMMIT;\n')
-      .replace(/SET time_zone = "\+00:00";\n/g, '')
-      .replace(/SET NAMES utf8mb4;\n/g, '');
-
-    // Diviser en requêtes individuelles
-    const queries = postgresSQL
-      .split(';')
-      .map(query => query.trim())
-      .filter(query => query.length > 0 && !query.startsWith('--') && !query.startsWith('/*'));
+    // Diviser en requêtes individuelles en respectant les blocs BEGIN/COMMIT
+    const queries = [];
+    let currentQuery = '';
+    const lines = sqlContent.split('\n');
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      // Ignorer les lignes vides et commentaires
+      if (!trimmedLine || trimmedLine.startsWith('--') || trimmedLine.startsWith('/*')) {
+        continue;
+      }
+      
+      currentQuery += line + '\n';
+      
+      // Si la ligne se termine par un point-virgule, c'est la fin d'une requête
+      if (trimmedLine.endsWith(';')) {
+        queries.push(currentQuery.trim());
+        currentQuery = '';
+      }
+    }
+    
+    // Ajouter la dernière requête si elle existe
+    if (currentQuery.trim()) {
+      queries.push(currentQuery.trim());
+    }
 
     console.log(`🔧 Exécution de ${queries.length} requêtes...`);
 
@@ -60,10 +60,14 @@ async function initializePostgreSQL() {
       const query = queries[i];
       if (query.trim()) {
         try {
+          console.log(`📝 Exécution requête ${i + 1}/${queries.length}:`);
+          console.log(query.substring(0, 100) + (query.length > 100 ? '...' : ''));
           await pool.query(query);
-          console.log(`✅ Requête ${i + 1}/${queries.length} exécutée`);
+          console.log(`✅ Requête ${i + 1}/${queries.length} exécutée avec succès`);
         } catch (error) {
-          console.warn(`⚠️ Erreur sur la requête ${i + 1}:`, error.message);
+          console.error(`❌ Erreur sur la requête ${i + 1}:`);
+          console.error('Requête:', query);
+          console.error('Erreur:', error.message);
         }
       }
     }
@@ -82,11 +86,15 @@ async function initializePostgreSQL() {
     });
 
     // Vérifier les utilisateurs
-    const usersResult = await pool.query('SELECT id, email, role FROM users');
-    console.log('👥 Utilisateurs créés :');
-    usersResult.rows.forEach(user => {
-      console.log(`  - ID: ${user.id}, Email: ${user.email}, Rôle: ${user.role}`);
-    });
+    try {
+      const usersResult = await pool.query('SELECT id, email, role FROM users');
+      console.log('👥 Utilisateurs créés :');
+      usersResult.rows.forEach(user => {
+        console.log(`  - ID: ${user.id}, Email: ${user.email}, Rôle: ${user.role}`);
+      });
+    } catch (error) {
+      console.log('⚠️ Table users pas encore créée ou vide');
+    }
 
   } catch (error) {
     console.error('❌ Erreur lors de l\'initialisation :', error);
