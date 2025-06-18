@@ -54,7 +54,11 @@ const allowedOrigins = [
   'http://localhost',
   'http://localhost:8080',
   'http://localhost:8100',
-  'http://localhost:56285'
+  'http://localhost:56285',
+  // Ajouter le frontend Vercel
+  'https://gsb-pharmacy-frontend-1iaqmwn0n-marvynshes-projects.vercel.app',
+  // Autoriser tous les domaines Vercel
+  'https://*.vercel.app'
 ];
 
 app.use(cors({
