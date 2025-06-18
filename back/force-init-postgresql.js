@@ -30,34 +30,17 @@ async function forceInitializePostgreSQL() {
 
     console.log('✅ Connexion à PostgreSQL établie');
 
-    // Lire le fichier SQL
-    const sqlFile = path.join(__dirname, 'bddfinalgsb.sql');
+    // Lire le fichier SQL PostgreSQL spécifique
+    const sqlFile = path.join(__dirname, 'schema-postgresql.sql');
     const sqlContent = await fs.readFile(sqlFile, 'utf8');
     
-    console.log('📄 Lecture du fichier SQL...');
+    console.log('📄 Lecture du fichier SQL PostgreSQL...');
     
-    // Convertir le SQL MySQL en PostgreSQL
-    let postgresSQL = sqlContent
-      // Remplacer les backticks par des guillemets doubles
-      .replace(/`/g, '"')
-      // Remplacer AUTO_INCREMENT par SERIAL
-      .replace(/AUTO_INCREMENT/g, 'SERIAL')
-      // Remplacer ENGINE=InnoDB par rien
-      .replace(/ENGINE=InnoDB/g, '')
-      // Remplacer DEFAULT CHARSET=utf8 par rien
-      .replace(/DEFAULT CHARSET=utf8/g, '')
-      // Supprimer les lignes SET SQL_MODE
-      .replace(/SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";\n/g, '')
-      .replace(/START TRANSACTION;\n/g, 'BEGIN;\n')
-      .replace(/COMMIT;\n/g, 'COMMIT;\n')
-      .replace(/SET time_zone = "\+00:00";\n/g, '')
-      .replace(/SET NAMES utf8mb4;\n/g, '');
-
     // Diviser en requêtes individuelles
-    const queries = postgresSQL
+    const queries = sqlContent
       .split(';')
       .map(query => query.trim())
-      .filter(query => query.length > 0 && !query.startsWith('--') && !query.startsWith('/*'));
+      .filter(query => query.length > 0 && !query.startsWith('--'));
 
     console.log(`🔧 Exécution de ${queries.length} requêtes...`);
 
