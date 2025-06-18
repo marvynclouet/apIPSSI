@@ -51,7 +51,7 @@ async function forceInitializePostgreSQL() {
           await pool.query(query);
           console.log(`✅ Requête ${i + 1}/${queries.length} exécutée`);
         } catch (error) {
-          console.warn(`⚠️ Erreur sur la requête ${i + 1}:`, error.message);
+          console.warn(`⚠️ Erreur sur la requête ${i + 1}:\n${query}\n${error.message}`);
         }
       }
     }
